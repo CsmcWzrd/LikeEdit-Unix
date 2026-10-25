@@ -1,0 +1,25 @@
+name: LikeEdit Unix CI
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libncurses-dev
+      - name: Install macOS ncurses
+        if: runner.os == 'macOS'
+        run: |
+          brew install ncurses
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix ncurses)" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=$(brew --prefix ncurses)/lib/pkgconfig" >> "$GITHUB_ENV"
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
